@@ -8,28 +8,35 @@ on:
 
 # Définit les variables pour le déploiement
 env:
-  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5 # VOTRE NOM RÉEL D'APP SERVICE
-  AZURE_WEBAPP_PACKAGE_PATH: './PartsUnlimitedWeb'               # Chemin où se trouve le code
-  DOTNET_VERSION: '8.x'                      # Utilisation de .NET 8.x
-  # MODIFIÉ : On cible directement le fichier de projet web au lieu du fichier solution générique
-  SOLUTION_PATH: 'src/PartsUnlimitedWeb/PartsUnlimitedWeb.csproj'        
+  # NOM DE VOTRE APP SERVICE (Utilisé dans l'étape 'Deploy')
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5
+  
+  # Chemin de sortie pour le paquet compilé
+  AZURE_WEBAPP_PACKAGE_PATH: './PartsUnlimitedWeb'
+  
+  # Version .NET (Ajustée pour correspondre à votre App Service)
+  DOTNET_VERSION: '8.x'
+  
+  # Chemin vers le fichier de projet web (corrigé pour trouver le .csproj)
+  SOLUTION_PATH: 'PartsUnlimited-aspnet45/PartsUnlimitedWeb/PartsUnlimitedWeb.csproj'        
 
 jobs:
   build:
-    runs-on: windows-latest  # Agent Windows pour correspondre à l'App Service Windows
+    # L'agent doit être Windows pour correspondre à l'App Service Windows
+    runs-on: windows-latest  
 
     steps:
     - uses: actions/checkout@v4
       name: Checkout code
 
     # 1. Configuration et Restauration des dépendances
-    - name: Setup .NET
+    - name: Setup .NET ${{ env.DOTNET_VERSION }}
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }} # Utilisation de la variable modifiée
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore dependencies
-      run: dotnet restore ${{ env.SOLUTION_PATH }} # Tente de restaurer spécifiquement le .sln
+      run: dotnet restore ${{ env.SOLUTION_PATH }}
 
     # 2. Build (Compilation) de l'application
     - name: Build
@@ -52,7 +59,7 @@ jobs:
 
   deploy:
     needs: build # Démarre seulement si l'étape 'build' réussit
-    runs-on: windows-latest # Utilisation de l'agent Windows
+    runs-on: windows-latest # Agent Windows
     environment:
       name: 'Development'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
@@ -69,8 +76,8 @@ jobs:
       id: deploy-to-webapp
       uses: azure/webapps-deploy@v3
       with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }} # Nom de votre App Service
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
         slot-name: 'Production'
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish # Le chemin vers l'Artéfact
-        # Utilise le secret AZURE_CREDENTIALS que vous avez configuré
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish
+        # Utilise le secret AZURE_CREDENTIALS
         publish-profile: ${{ secrets.AZURE_CREDENTIALS }}
