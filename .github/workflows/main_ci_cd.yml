@@ -8,7 +8,7 @@ env:
   # Chemin vers le fichier de solution que vous avez trouvé
   SOLUTION_PATH: env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln
   # Dossier de publication de l'application web (le VSBuild crée un .zip ici)
-  AZURE_WEBAPP_PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/drop' 
+  AZURE_WEBAPP_PACKAGE_PATH: './drop' 
 
 # Déclenche le workflow à chaque push sur la branche 'master' (CI)
 on:
@@ -41,7 +41,7 @@ jobs:
     # 4. Build de la solution (Compilation)
     - name: Build the solution
       run: |
-        msbuild ${{ env.SOLUTION_PATH }} /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(System.DefaultWorkingDirectory)\drop"
+        msbuild ${{ env.SOLUTION_PATH }} /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="drop"
 
     # 5. Exécution des tests (non configuré pour ce template, mais inclus)
     - name: Run Tests
@@ -53,7 +53,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-app
-        path: '$(System.DefaultWorkingDirectory)/drop' # Publie le dossier 'drop' créé par msbuild
+        path: drop # Publie le dossier 'drop' créé par msbuild
 
   deploy:
     runs-on: windows-latest
