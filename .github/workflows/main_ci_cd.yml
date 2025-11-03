@@ -17,8 +17,8 @@ env:
   # Version .NET (Ajustée pour correspondre à votre App Service)
   DOTNET_VERSION: '8.x'
   
-  # Chemin vers le fichier de projet web (corrigé pour trouver le .csproj)
-  SOLUTION_PATH: 'PartsUnlimited-aspnet45/PartsUnlimitedWeb/PartsUnlimitedWeb.csproj'        
+  # MODIFIÉ : Chemin générique pour que dotnet trouve le fichier solution/projet n'importe où
+  SOLUTION_PATH: '**/*.sln'        
 
 jobs:
   build:
@@ -36,18 +36,23 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Restore dependencies
+      # MODIFIÉ : On utilise le caractère générique pour trouver le fichier .sln
       run: dotnet restore ${{ env.SOLUTION_PATH }}
 
     # 2. Build (Compilation) de l'application
     - name: Build
+      # MODIFIÉ : On utilise le caractère générique pour le build
       run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
     # 3. Test de l'application
     - name: Test
+      # MODIFIÉ : On utilise le caractère générique pour les tests
       run: dotnet test ${{ env.SOLUTION_PATH }} --no-build --verbosity normal
 
     # 4. Publication des Artéfacts du Build
     - name: Publish web app
+      # IMPORTANT : Si le build réussit, nous devrons peut-être ajuster cette commande. 
+      # On va d'abord laisser le système trouver le projet web à publier.
       run: dotnet publish ${{ env.SOLUTION_PATH }} -c Release -o ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish
 
     # 5. Téléchargement de l'Artéfact pour la phase de Déploiement
