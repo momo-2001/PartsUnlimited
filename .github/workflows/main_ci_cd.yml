@@ -13,7 +13,7 @@ env:
   AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5    # Nom de votre App Service
   AZURE_WEBAPP_PACKAGE_PATH: '.'  # Chemin du paquet après la publication
   DOTNET_VERSION: '6.x'           # Version corrigée pour la compatibilité (6.x)
-  SOLUTION_PATH: 'env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln' # Chemin exact de la solution que vous avez trouvé
+  SOLUTION_PATH: '**/*.csproj'    # Cibler tous les fichiers projet
 
 jobs:
   build:
@@ -36,14 +36,15 @@ jobs:
     - name: Restore, Build, and Publish
       shell: pwsh
       run: |
-        # Restaure les paquets NuGet en forçant l'opération pour contourner l'erreur de "lock file"
-        dotnet restore ${{ env.SOLUTION_PATH }} --force 
+        # Restaure les paquets NuGet sans essayer de créer de fichier de verrouillage
+        dotnet restore
         
-        # Compile la solution
-        dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+        # Compile la solution (force la recherche de tous les .csproj trouvés)
+        dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
         
-        # Publie l'application web pour le déploiement
-        dotnet publish ${{ env.SOLUTION_PATH }} --configuration Release --no-build --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/published_app
+        # Publie l'application web pour le déploiement. Nous publions le projet web
+        # le plus probable dans le dépôt (souvent celui qui a le .csproj à la racine du sous-dossier)
+        dotnet publish ${{ env.SOLUTION_PATH }} --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/published_app --no-build
 
     # 3. Préparation de l'Artéfact pour le déploiement (CD)
     - name: Upload artifact for deployment
