@@ -33,7 +33,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-app
-        path: drop # Utilise le dossier 'drop' créé par msbuild
+        path: drop/**/*.zip # Correction: Recherche tous les fichiers .zip dans le dossier 'drop'
 
   deploy:
     needs: build
