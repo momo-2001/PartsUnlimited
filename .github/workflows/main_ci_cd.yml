@@ -1,0 +1,74 @@
+name: ASP.NET Core CI/CD to Azure App Service
+
+# Déclenche le workflow à chaque push sur la branche 'master' (CI)
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+# Définit les variables pour le déploiement
+env:
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5 # VOTRE NOM RÉEL D'APP SERVICE
+  AZURE_WEBAPP_PACKAGE_PATH: '.'               # Chemin où se trouve le code
+  DOTNET_VERSION: '6.0.x'                      # Version de .NET à utiliser pour le build
+
+jobs:
+  build:
+    runs-on: windows-latest  # Agent Windows pour correspondre à l'App Service Windows
+
+    steps:
+    - uses: actions/checkout@v4
+      name: Checkout code
+
+    # 1. Configuration et Restauration des dépendances
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # 2. Build (Compilation) de l'application
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    # 3. Test de l'application
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+
+    # 4. Publication des Artéfacts du Build
+    - name: Publish web app
+      run: dotnet publish -c Release -o ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish
+
+    # 5. Téléchargement de l'Artéfact pour la phase de Déploiement
+    - name: Upload artifact for deployment
+      uses: actions/upload-artifact@v4
+      with:
+        name: dotnet-app
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish
+
+  deploy:
+    needs: build # Démarre seulement si l'étape 'build' réussit
+    runs-on: windows-latest # Utilisation de l'agent Windows
+    environment:
+      name: 'Development'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v4
+      with:
+        name: dotnet-app
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+
+    # 6. Déploiement sur Azure App Service (CD)
+    - name: Deploy to Azure WebApp
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }} # Nom de votre App Service
+        slot-name: 'Production'
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish # Le chemin vers l'Artéfact
+        # Utilise le secret AZURE_CREDENTIALS que vous avez configuré
+        publish-profile: ${{ secrets.AZURE_CREDENTIALS }}
