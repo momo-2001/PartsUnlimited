@@ -1,24 +1,11 @@
-# Nom du workflow (s'affiche dans GitHub Actions)
-name: ASP.NET Framework CI/CD to Azure App Service
-
-# VARIABLES GLOBALES
-env:
-  # Remplacé par le nom exact de votre App Service Windows
-  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5
-  # Chemin vers le fichier de solution que vous avez trouvé
-  SOLUTION_PATH: env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln
-  # Dossier de publication de l'application web (le VSBuild crée un .zip ici)
-  AZURE_WEBAPP_PACKAGE_PATH: './drop' 
-
-# Déclenche le workflow à chaque push sur la branche 'master' (CI)
 on:
   push:
     branches: [ master ]
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5 # Remplacez par le nom de votre App Service
-  AZURE_WEBAPP_PACKAGE_PATH: '.' # Chemin où le package est créé
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5 # Nom de votre App Service
+  AZURE_WEBAPP_PACKAGE_PATH: '.' # Chemin où le package est créé (racine)
   SOLUTION_PATH: 'env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln' # Chemin de solution trouvé
   
 jobs:
@@ -46,7 +33,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-app
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        path: drop # Utilise le dossier 'drop' créé par msbuild
 
   deploy:
     needs: build
@@ -57,7 +44,7 @@ jobs:
       with:
         name: dotnet-app
 
-      # Étape 7: Déploiement sur Azure App Service
+      # Étape 7: Déploiement sur Azure WebApp
     - name: 'Deploy to Azure WebApp'
       uses: azure/webapps-deploy@v2
       with:
