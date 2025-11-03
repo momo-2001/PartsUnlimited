@@ -38,16 +38,27 @@ jobs:
   deploy:
     needs: build
     runs-on: windows-latest
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     steps:
-      # Étape 6: Téléchargement de l'Artéfact
+      # NOUVEAU: Étape d'authentification Azure
+    - name: 'Azure Login'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }} # Utilise le secret que nous avons configuré
+
+    # Étape 6: Téléchargement de l'Artéfact
     - uses: actions/download-artifact@v4
       with:
         name: dotnet-app
 
       # Étape 7: Déploiement sur Azure WebApp
     - name: 'Deploy to Azure WebApp'
+      id: deploy-to-webapp
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.AZURE_CREDENTIALS }}
+        # Suppression du champ publish-profile car l'action azure/login fournit les credentials
         package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        slot-name: 'production'
