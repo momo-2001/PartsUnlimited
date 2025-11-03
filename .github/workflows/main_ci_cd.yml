@@ -1,82 +1,81 @@
-# Ceci est un pipeline CI/CD pour une application ASP.NET déployée sur Azure App Service.
-# La version .NET a été changée à 6.x pour améliorer la compatibilité avec l'ancien code Parts Unlimited.
+# Nom du workflow (s'affiche dans GitHub Actions)
+name: ASP.NET Framework CI/CD to Azure App Service
 
-name: ASP.NET Core CI/CD to Azure App Service
+# VARIABLES GLOBALES
+env:
+  # Remplacé par le nom exact de votre App Service Windows
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5
+  # Chemin vers le fichier de solution que vous avez trouvé
+  SOLUTION_PATH: env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln
+  # Dossier de publication de l'application web (le VSBuild crée un .zip ici)
+  AZURE_WEBAPP_PACKAGE_PATH: '$(System.DefaultWorkingDirectory)/drop' 
 
+# Déclenche le workflow à chaque push sur la branche 'master' (CI)
 on:
   push:
     branches: [ master ]
   workflow_dispatch:
 
-# Variables que vous avez définies pour votre déploiement
-env:
-  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5    # Nom de votre App Service
-  AZURE_WEBAPP_PACKAGE_PATH: '.'  # Chemin du paquet après la publication
-  DOTNET_VERSION: '6.x'           # Version corrigée pour la compatibilité (6.x)
-  SOLUTION_PATH: '**/*.csproj'    # Cibler tous les fichiers projet
-
+# Définition des jobs (tâches)
 jobs:
   build:
-    # ----------------------------------------------------
-    # JOB DE BUILD (Intégration Continue - CI)
-    # ----------------------------------------------------
+    # Utilise l'agent Windows pour la compilation du Framework .NET classique
     runs-on: windows-latest
-
+    
+    # OUTPUTS: définit une sortie pour passer le chemin de l'artefact au job 'deploy'
+    outputs:
+      webapp-package-path: ${{ steps.publish.outputs.webapp-package-path }}
+      
     steps:
+    # 1. Checkout du code
     - uses: actions/checkout@v4
+    
+    # 2. Setup du Framework .NET
+    - name: Setup MSBuild and NuGet
+      uses: microsoft/setup-msbuild@v2
 
-    # 1. Configuration de l'environnement .NET
-    - name: Set up DOTNET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        cache: true
-
-    # 2. Restauration des dépendances et Compilation (Utilisation du chemin exact)
-    - name: Restore, Build, and Publish
-      shell: pwsh
+    # 3. Restauration des dépendances
+    - name: Restore NuGet packages
+      run: nuget restore ${{ env.SOLUTION_PATH }}
+      
+    # 4. Build de la solution (Compilation)
+    - name: Build the solution
       run: |
-        # Restaure les paquets NuGet sans essayer de créer de fichier de verrouillage
-        dotnet restore
-        
-        # Compile la solution (force la recherche de tous les .csproj trouvés)
-        dotnet build ${{ env.SOLUTION_PATH }} --configuration Release
-        
-        # Publie l'application web pour le déploiement. Nous publions le projet web
-        # le plus probable dans le dépôt (souvent celui qui a le .csproj à la racine du sous-dossier)
-        dotnet publish ${{ env.SOLUTION_PATH }} --configuration Release --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/published_app --no-build
+        msbuild ${{ env.SOLUTION_PATH }} /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="$(System.DefaultWorkingDirectory)\drop"
 
-    # 3. Préparation de l'Artéfact pour le déploiement (CD)
-    - name: Upload artifact for deployment
+    # 5. Exécution des tests (non configuré pour ce template, mais inclus)
+    - name: Run Tests
+      # Nous sautons VSTest pour le moment pour ne pas bloquer si les tests manquent
+      run: echo "Tests VSTest skipped for initial deployment."
+    
+    # 6. Publication de l'Artéfact de Build
+    - name: Publish Build Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-app
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/published_app
-        
-  deploy:
-    # ----------------------------------------------------
-    # JOB DE DÉPLOIEMENT (Déploiement Continu - CD)
-    # ----------------------------------------------------
-    needs: build # Ne s'exécute que si le job 'build' est VERT
-    runs-on: windows-latest
-    environment:
-      name: 'Development' # Peut être ajusté (Staging, Production)
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+        path: '$(System.DefaultWorkingDirectory)/drop' # Publie le dossier 'drop' créé par msbuild
 
+  deploy:
+    runs-on: windows-latest
+    needs: build # Dépend de la réussite du job 'build'
+    environment:
+      name: 'Development' # Nom de l'environnement, peut être remplacé
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+      
     steps:
-    # 1. Téléchargement de l'Artéfact depuis le job 'build'
-    - name: Download artifact from build job
+    # 1. Téléchargement de l'Artéfact
+    - name: Download Build Artifact
       uses: actions/download-artifact@v4
       with:
         name: dotnet-app
         path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-    # 2. Déploiement sur Azure App Service (Utilisation du secret AZURE_CREDENTIALS)
+        
+    # 2. Déploiement vers Azure App Service
     - name: Deploy to Azure WebApp
       id: deploy-to-webapp
       uses: azure/webapps-deploy@v3
       with:
+        # Secret créé précédemment dans Azure Cloud Shell
+        publish-profile: ${{ secrets.AZURE_CREDENTIALS }} 
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        slot-name: 'Production'
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-        publish-profile: ${{ secrets.AZURE_CREDENTIALS }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }} # Utilise le package téléchargé
