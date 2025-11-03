@@ -9,8 +9,10 @@ on:
 # Définit les variables pour le déploiement
 env:
   AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5 # VOTRE NOM RÉEL D'APP SERVICE
-  AZURE_WEBAPP_PACKAGE_PATH: '.'               # Chemin où se trouve le code
-  DOTNET_VERSION: '6.0.x'                      # Version de .NET à utiliser pour le build
+  AZURE_WEBAPP_PACKAGE_PATH: './PartsUnlimitedWeb'               # Chemin où se trouve le code
+  DOTNET_VERSION: '8.x'                      # Utilisation de .NET 8.x
+  # MODIFIÉ : On cible directement le fichier de projet web au lieu du fichier solution générique
+  SOLUTION_PATH: 'src/PartsUnlimitedWeb/PartsUnlimitedWeb.csproj'        
 
 jobs:
   build:
@@ -24,22 +26,22 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
+        dotnet-version: ${{ env.DOTNET_VERSION }} # Utilisation de la variable modifiée
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ${{ env.SOLUTION_PATH }} # Tente de restaurer spécifiquement le .sln
 
     # 2. Build (Compilation) de l'application
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
     # 3. Test de l'application
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test ${{ env.SOLUTION_PATH }} --no-build --verbosity normal
 
     # 4. Publication des Artéfacts du Build
     - name: Publish web app
-      run: dotnet publish -c Release -o ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish
+      run: dotnet publish ${{ env.SOLUTION_PATH }} -c Release -o ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/publish
 
     # 5. Téléchargement de l'Artéfact pour la phase de Déploiement
     - name: Upload artifact for deployment
