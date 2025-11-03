@@ -10,9 +10,9 @@ on:
 
 # Variables que vous avez définies pour votre déploiement
 env:
-  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5    # Remplacez par le nom exact de votre App Service
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5    # Nom de votre App Service
   AZURE_WEBAPP_PACKAGE_PATH: '.'  # Chemin du paquet après la publication
-  DOTNET_VERSION: '6.x'           # Version corrigée pour la compatibilité
+  DOTNET_VERSION: '6.x'           # Version corrigée pour la compatibilité (6.x)
   SOLUTION_PATH: 'env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln' # Chemin exact de la solution que vous avez trouvé
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 1. Configuration de l'environnement .NET (Correction de la version)
+    # 1. Configuration de l'environnement .NET
     - name: Set up DOTNET Core
       uses: actions/setup-dotnet@v4
       with:
@@ -36,8 +36,8 @@ jobs:
     - name: Restore, Build, and Publish
       shell: pwsh
       run: |
-        # Restaure les paquets NuGet en utilisant le chemin exact de la solution
-        dotnet restore ${{ env.SOLUTION_PATH }}
+        # Restaure les paquets NuGet en forçant l'opération pour contourner l'erreur de "lock file"
+        dotnet restore ${{ env.SOLUTION_PATH }} --force 
         
         # Compile la solution
         dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
