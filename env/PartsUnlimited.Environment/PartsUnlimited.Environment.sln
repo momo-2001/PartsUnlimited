@@ -1,22 +1,64 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.22529.0
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "PartsUnlimited.Environment", "PartsUnlimited.Environment\PartsUnlimited.Environment.deployproj", "{A38CD247-E7EC-4035-914C-AEAF6ABE3941}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A38CD247-E7EC-4035-914C-AEAF6ABE3941}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A38CD247-E7EC-4035-914C-AEAF6ABE3941}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A38CD247-E7EC-4035-914C-AEAF6ABE3941}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A38CD247-E7EC-4035-914C-AEAF6ABE3941}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-EndGlobal
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  SOLUTION_PATH: 'env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Étape 1: Installation de .NET Framework (Nécessaire pour VSBuild)
+    - name: 'Setup MSBuild'
+      uses: microsoft/setup-msbuild@v2
+
+    # Étape 2: Restauration des dépendances avec NuGet
+    - name: Restore NuGet Packages
+      run: nuget restore ${{ env.SOLUTION_PATH }}
+
+    # Étape 3: Compilation du code (Build)
+    - name: Build the solution
+      run: msbuild ${{ env.SOLUTION_PATH }} /p:Configuration=Release /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:PackageLocation="drop"
+
+    # Étape 4: Publication de l'Artéfact pour le déploiement
+    - name: Upload artifact for deployment
+      uses: actions/upload-artifact@v4
+      with:
+        name: dotnet-app
+        path: '**/*.*'
+
+  deploy:
+    needs: build
+    runs-on: windows-latest
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    steps:
+      # NOUVEAU: Étape d'authentification Azure
+    - name: 'Azure Login'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }} # Utilise le secret que nous avons configuré
+
+    # Étape 6: Téléchargement de l'Artéfact
+    - uses: actions/download-artifact@v4
+      with:
+        name: dotnet-app
+
+      # Étape 7: Déploiement sur Azure WebApp
+    - name: 'Deploy to Azure WebApp'
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        # Suppression du champ publish-profile car l'action azure/login fournit les credentials
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+        slot-name: 'production'
