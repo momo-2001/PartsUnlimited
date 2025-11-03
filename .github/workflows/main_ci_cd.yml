@@ -33,7 +33,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-app
-        path: drop/**/*.zip # Correction: Recherche tous les fichiers .zip dans le dossier 'drop'
+        path: '**/*.zip' # Correction: Recherche TOUS les fichiers .zip dans le répertoire de travail.
 
   deploy:
     needs: build
@@ -50,4 +50,4 @@ jobs:
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZURE_CREDENTIALS }}
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}#
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
