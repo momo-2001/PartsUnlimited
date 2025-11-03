@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5 # Nom de votre App Service
-  AZURE_WEBAPP_PACKAGE_PATH: '.' # Chemin où le package est créé (racine)
-  SOLUTION_PATH: 'env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln' # Chemin de solution trouvé
-  
+  AZURE_WEBAPP_NAME: parts-unlimited-moo-lah-dev-ane5bcgjfge7d9f5
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  SOLUTION_PATH: 'env/PartsUnlimited.Environment/PartsUnlimited.Environment.sln'
+
 jobs:
   build:
     runs-on: windows-latest
@@ -33,7 +33,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-app
-        path: '**/*.zip' # Correction: Recherche TOUS les fichiers .zip dans le répertoire de travail.
+        path: '**/*.*'
 
   deploy:
     needs: build
